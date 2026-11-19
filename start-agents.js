@@ -76,15 +76,19 @@ list.forEach(p => {
 });
 
 if (!watching) {
-  console.error('没有可监听的目录，请检查 projects.json 里的 watch 路径。');
-  process.exit(1);
+  // 首次克隆常见：示例里的路径不存在。不要直接退出，
+  // 否则页面会显示「后台已停止」灰罩，新用户会以为坏了。
+  console.warn('\n⚠ 没有可监听的目录。');
+  console.warn('  把 projects.example.json 复制成 projects.json，改成你自己的项目路径后');
+  console.warn('  在页面上点「继续」即可（不用重启服务）。\n');
+  setInterval(() => {}, 1 << 30);   // 保持进程存活，页面显示「运行中」
+} else {
+  // 启动时把所有项目刷成 idle（这样页面一开始就能看到全部小人）
+  list.forEach(p => {
+    if (p.watch && fs.existsSync(p.watch)) upsert(p, 'idle', '待命');
+  });
+  console.log(`\n共监听 ${watching} 个项目，状态写入 ${OUT}\n`);
 }
-
-// 启动时把所有项目刷成 idle（这样页面一开始就能看到全部小人）
-list.forEach(p => {
-  if (p.watch && fs.existsSync(p.watch)) upsert(p, 'idle', '待命');
-});
-console.log(`\n共监听 ${watching} 个项目，状态写入 ${OUT}\n`);
 
 function shutdown() {
   console.log('\n退出中…');

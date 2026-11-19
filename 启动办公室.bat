@@ -9,7 +9,7 @@ echo   后台监听由页面托管，可随时「停止 / 继续」
 echo ============================================
 echo.
 
-echo [1/2] 启动服务（会自动拉起 15 个项目的目录监听）...
+echo [1/2] 启动服务（会按 projects.json 自动拉起目录监听）...
 start "Trae Office - Server" cmd /k node server.js
 
 timeout /t 3 >nul
