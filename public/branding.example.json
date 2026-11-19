@@ -1,0 +1,5 @@
+{
+  "_说明": "把本文件复制成 branding.json 再改；branding.json 已在 .gitignore 里，不会被提交。不配置就什么都不画。",
+  "logo": "./assets/logo.png",
+  "wallText": "你的公司名称"
+}

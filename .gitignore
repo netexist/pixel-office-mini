@@ -1,0 +1,20 @@
+# 运行态文件（监听器会不停改写，不进版本库）
+agents.json
+
+# 个人配置：真实项目清单与品牌（开源仓库不带，克隆后按 .example 复制）
+projects.json
+public/branding.json
+public/assets/tscm-logo.png
+
+# 临时/调试产物
+*.log
+_*.png
+
+# 依赖与系统文件
+node_modules/
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.err

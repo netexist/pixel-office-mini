@@ -1,0 +1,5 @@
+[
+  { "id": "web",   "name": "Trae·官网",   "seat": "desk-1", "watch": "D:\\code\\project-a" },
+  { "id": "admin", "name": "Trae·后台",   "seat": "desk-2", "watch": "D:\\code\\project-b" },
+  { "id": "mp",    "name": "Trae·小程序", "seat": "desk-3", "watch": "D:\\code\\project-c" }
+]

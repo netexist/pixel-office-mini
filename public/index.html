@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trae 办公室 · 实时状态</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --ink: #E9EFF7;
+    --muted: #90A3B8;
+    --line: rgba(255,255,255,.08);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1300px 680px at 50% -12%, rgba(84,132,220,.22), transparent 62%),
+      radial-gradient(900px 520px at 88% 6%, rgba(228,199,119,.10), transparent 58%),
+      #0A111C;
+    color: var(--ink);
+    font-family: "Microsoft YaHei", "PingFang SC", system-ui, -apple-system, sans-serif;
+    display: flex; justify-content: center;
+    padding: 20px 20px 24px;
+  }
+  .wrap { width: min(1420px, 100%); display: flex; flex-direction: column; gap: 12px; }
+
+  .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .brand h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: .5px; }
+  .brand p { margin: 5px 0 0; font-size: 13px; color: var(--muted); }
+
+  .rooms { display: flex; gap: 8px; flex: 1; justify-content: center; }
+  .room-btn {
+    padding: 8px 18px; border-radius: 999px; cursor: pointer;
+    background: rgba(255,255,255,.05); border: 1px solid var(--line);
+    color: #A9BACE; font-size: 13.5px; font-family: inherit; font-weight: 500;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  .room-btn:hover { background: rgba(255,255,255,.09); color: var(--ink); }
+  .room-btn.is-on {
+    background: rgba(228,199,119,.16);
+    border-color: rgba(228,199,119,.45);
+    color: #F0DFA8;
+  }
+  .room-btn .n {
+    display: inline-block; min-width: 16px; margin-left: 6px; padding: 0 5px;
+    border-radius: 999px; font-size: 11.5px; font-weight: 700; line-height: 16px;
+    background: rgba(255,255,255,.10); color: #C9D4E2;
+  }
+  .room-btn.is-on .n { background: rgba(228,199,119,.28); color: #F6E8BE; }
+
+  .stat {
+    display: inline-flex; align-items: baseline; gap: 6px;
+    background: rgba(255,255,255,.05); border: 1px solid var(--line);
+    padding: 8px 14px; border-radius: 999px; font-size: 13px; color: var(--muted);
+  }
+  .stat b { font-size: 20px; color: #E4C777; line-height: 1; }
+
+  .stage {
+    position: relative; width: 100%; aspect-ratio: 1340 / 880;
+    border-radius: 18px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,.07);
+    box-shadow: 0 30px 70px rgba(0,0,0,.55), inset 0 0 90px rgba(90,140,220,.07);
+    background: radial-gradient(120% 90% at 50% 28%, #16202E 0%, #0C1420 72%);
+  }
+  .stage canvas { display: block; width: 100%; height: 100%; }
+
+  .labels { position: absolute; inset: 0; pointer-events: none; }
+
+  .agent-label {
+    position: absolute; transform: translate(-50%, -100%);
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    will-change: left, top;
+    pointer-events: auto; cursor: pointer;
+  }
+  .bubble {
+    position: relative;
+    max-width: 240px; padding: 7px 11px; border-radius: 12px;
+    background: #FFFFFF; color: #1E293B;
+    font-size: 14px; line-height: 1.4; font-weight: 600;
+    box-shadow: 0 8px 20px rgba(0,0,0,.35);
+    text-align: center; word-break: break-word;
+  }
+  .bubble::after {
+    content: ''; position: absolute; left: 50%; bottom: -5px; width: 10px; height: 10px;
+    background: #fff; transform: translateX(-50%) rotate(45deg); border-radius: 2px;
+  }
+  .name {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 5px 12px; border-radius: 999px;
+    background: rgba(10,18,28,.88);
+    border: 1px solid rgba(255,255,255,.10);
+    font-size: 14px; font-weight: 600; color: #EAF0F7; white-space: nowrap;
+  }
+  .name i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .name .st { font-size: 12.5px; font-weight: 500; color: #A9BACE; }
+  .name .act {
+    font-size: 12px; font-weight: 500; color: #E4C777;
+    padding-left: 7px; border-left: 1px solid rgba(255,255,255,.14);
+  }
+
+  .bar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--muted);
+  }
+  .conn { display: inline-flex; align-items: center; gap: 7px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #22C55E; box-shadow: 0 0 0 3px rgba(34,197,94,.16); }
+  .dot.err { background: #EF4444; box-shadow: 0 0 0 3px rgba(239,68,68,.16); }
+  .legend { display: flex; gap: 10px; flex-wrap: wrap; }
+  .legend span {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 11px; border-radius: 999px;
+    background: rgba(255,255,255,.04); border: 1px solid var(--line);
+    font-size: 12.5px;
+  }
+  .legend i { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* ---- 点击人物后的详情卡 ---- */
+  .detail {
+    position: absolute; z-index: 5; width: 250px;
+    padding: 12px 13px 13px; border-radius: 13px;
+    background: rgba(12,20,30,.96);
+    border: 1px solid rgba(255,255,255,.13);
+    box-shadow: 0 18px 44px rgba(0,0,0,.58);
+    color: var(--ink); font-size: 13px; line-height: 1.5;
+    backdrop-filter: blur(6px);
+  }
+  .detail[hidden] { display: none; }
+  .detail .d-head { display: flex; align-items: center; gap: 7px; margin-bottom: 9px; }
+  .detail .d-head i { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .detail .d-head b { font-size: 14.5px; font-weight: 700; }
+  .detail .d-head .st {
+    margin-left: auto; font-size: 11.5px; color: #A9BACE;
+    background: rgba(255,255,255,.07); border-radius: 999px; padding: 2px 8px;
+  }
+  .detail .d-row { display: flex; gap: 8px; margin-top: 6px; }
+  .detail .d-row .k { flex: none; width: 42px; color: #7E93A9; }
+  .detail .d-row .v { flex: 1; color: #DFE7F0; word-break: break-word; }
+  .detail .d-act { color: #E4C777; font-weight: 600; }
+  .detail .d-close {
+    position: absolute; top: 7px; right: 8px; width: 20px; height: 20px;
+    border: 0; border-radius: 6px; cursor: pointer;
+    background: transparent; color: #7E93A9; font-size: 16px; line-height: 1;
+    font-family: inherit;
+  }
+  .detail .d-close:hover { background: rgba(255,255,255,.10); color: var(--ink); }
+
+  /* ---- 空房间提示 ---- */
+  .empty-hint {
+    position: absolute; left: 50%; top: 46%; transform: translate(-50%, -50%);
+    text-align: center; pointer-events: none; z-index: 4;
+    color: #C9D4E2; font-size: 15px; line-height: 1.7;
+    text-shadow: 0 2px 10px rgba(0,0,0,.6);
+  }
+  .empty-hint[hidden] { display: none; }
+  .empty-hint b { display: block; font-size: 17px; color: #E4C777; margin-bottom: 4px; }
+
+  /* ---- 显示开关 ---- */
+  .show-wrap { position: absolute; top: 12px; right: 12px; z-index: 6; }
+  .show-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 13px; border-radius: 999px; cursor: pointer;
+    background: rgba(12,20,30,.82); border: 1px solid rgba(255,255,255,.14);
+    color: #C9D6E4; font-size: 12.5px; font-family: inherit; font-weight: 500;
+    backdrop-filter: blur(6px);
+  }
+  .show-btn:hover { background: rgba(20,32,46,.95); color: #EAF2FB; }
+  .show-btn.on { border-color: rgba(228,199,119,.5); color: #F0DFA8; }
+
+  .show-panel {
+    position: absolute; top: 40px; right: 0; width: 236px;
+    max-height: 320px; overflow-y: auto;
+    background: rgba(12,20,30,.96);
+    border: 1px solid rgba(255,255,255,.13);
+    border-radius: 12px;
+    box-shadow: 0 18px 44px rgba(0,0,0,.58);
+    backdrop-filter: blur(6px);
+    padding: 8px 6px 6px;
+  }
+  .show-panel[hidden] { display: none; }
+  .show-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 2px 8px 8px; font-size: 12px; color: #8FA3B8;
+  }
+  .show-head button {
+    margin-left: 6px; padding: 2px 8px; border-radius: 6px; cursor: pointer;
+    background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.10);
+    color: #B7C6D6; font-size: 11.5px; font-family: inherit;
+  }
+  .show-head button:hover { background: rgba(255,255,255,.14); color: #EDF4FB; }
+
+  .sw-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 8px; border-radius: 8px; cursor: pointer;
+    font-size: 12.5px; color: #D5DFEA;
+  }
+  .sw-row:hover { background: rgba(255,255,255,.07); }
+  .sw-row i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+  .sw-row .sw-n { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sw-row .sw-t { font-size: 11px; color: #7E93A9; }
+  .sw-row::after {
+    content: 'ON'; font-size: 10.5px; font-weight: 700; letter-spacing: .5px;
+    color: #6FD08C; flex: none;
+  }
+  .sw-row.off { color: #6E8095; }
+  .sw-row.off::after { content: 'OFF'; color: #7E93A9; }
+  .sw-row.off .sw-n { text-decoration: line-through; }
+
+  /* ---- 停止遮罩 ---- */
+  .stopped-veil {
+    position: absolute; inset: 0; z-index: 4;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px;
+    background: rgba(6,12,20,.55);
+    backdrop-filter: grayscale(.65);
+    color: #C9D4E2; font-size: 14px; pointer-events: none;
+  }
+  .stopped-veil[hidden] { display: none; }
+  .stopped-veil b { font-size: 21px; color: #E4C777; letter-spacing: 1.5px; }
+
+  /* ---- 底部 停止 / 继续 ---- */
+  .bar-left { display: inline-flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .ctrl { display: inline-flex; align-items: center; gap: 8px; }
+  .ctrl-btn {
+    padding: 5px 15px; border-radius: 999px; cursor: pointer;
+    font-family: inherit; font-size: 12.5px; font-weight: 600;
+    border: 1px solid rgba(239,68,68,.45);
+    background: rgba(239,68,68,.14); color: #FFB8B8;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .ctrl-btn:hover { background: rgba(239,68,68,.26); }
+  .ctrl-btn.is-resume {
+    border-color: rgba(34,197,94,.45);
+    background: rgba(34,197,94,.14);
+    color: #9FE7B7;
+  }
+  .ctrl-btn.is-resume:hover { background: rgba(34,197,94,.26); }
+  .ctrl-btn:disabled { opacity: .5; cursor: default; }
+  .ctrl-state { font-size: 12.5px; color: #7E93A9; }
+
+  /* ---- 竖屏 / 窄窗口：三间房上下堆叠，隐藏标签页 ---- */
+  .wrap.stacked .rooms { display: none; }
+  .wrap.stacked .head { justify-content: space-between; }
+  .wrap.stacked .stage {
+    /* 高度由 JS 按 1340 : 880×房间数 写入 aspect-ratio */
+    box-shadow: 0 24px 56px rgba(0,0,0,.5);
+  }
+
+  @media (max-width: 900px) {
+    .head { align-items: flex-start; }
+    .rooms { order: 3; width: 100%; justify-content: flex-start; flex: none; }
+    .brand h1 { font-size: 18px; }
+    .bubble { font-size: 13px; max-width: 160px; }
+    .name { font-size: 13px; padding: 4px 9px; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="head">
+      <div class="brand">
+        <h1>Trae 办公室</h1>
+        <p>2.5D 等距插画 · 读取 agents.json 实时同步</p>
+      </div>
+
+      <div class="rooms" id="rooms">
+        <button class="room-btn is-on" data-room="0">开放办公区<b class="n">0</b></button>
+        <button class="room-btn" data-room="1">会议室<b class="n">0</b></button>
+        <button class="room-btn" data-room="2">休息区<b class="n">0</b></button>
+      </div>
+
+      <div class="stat"><span>在线</span><b id="count">0</b><span>位 agent</span></div>
+    </header>
+
+    <div class="stage">
+      <canvas id="c" width="1340" height="880"></canvas>
+      <div class="labels" id="labels"></div>
+      <div class="empty-hint" id="emptyHint" hidden>
+        <b>当前没有进行中的项目</b>
+        Trae 正在会议室或休息区待命
+      </div>
+
+      <div class="show-wrap">
+        <button class="show-btn" id="showBtn">显示 <b id="showStat">0/0</b></button>
+        <div class="show-panel" id="showPanel" hidden>
+          <div class="show-head">
+            <span>显示开关</span>
+            <span>
+              <button data-act="all">全显示</button>
+              <button data-act="none">全隐藏</button>
+            </span>
+          </div>
+          <div class="show-list" id="showList"></div>
+        </div>
+      </div>
+
+      <div class="stopped-veil" id="stoppedVeil" hidden>
+        <b>后台已停止</b>
+        <span>目录监听已释放 · 点左下角「继续」重新拉起</span>
+      </div>
+      <div class="detail" id="detail" hidden>
+        <button class="d-close" id="detailClose" title="关闭">×</button>
+        <div class="d-head"><i id="dDot"></i><b id="dName"></b><span class="st" id="dState"></span></div>
+        <div class="d-row"><span class="k">当前</span><span class="v d-act" id="dAct"></span></div>
+        <div class="d-row"><span class="k">任务</span><span class="v" id="dTask"></span></div>
+        <div class="d-row"><span class="k">工位</span><span class="v" id="dSeat"></span></div>
+      </div>
+    </div>
+
+    <footer class="bar">
+      <span class="bar-left">
+        <span class="ctrl">
+          <button class="ctrl-btn" id="ctrlBtn">停止</button>
+          <span class="ctrl-state" id="ctrlState">运行中 · 后台监听已开启</span>
+        </span>
+        <span class="conn"><i class="dot" id="dot"></i><span id="status">连接中…</span></span>
+      </span>
+      <div class="legend">
+        <span><i style="background:#22C55E"></i>写代码</span>
+        <span><i style="background:#3B82F6"></i>查资料</span>
+        <span><i style="background:#F97316"></i>执行中</span>
+        <span><i style="background:#EAB308"></i>等你确认</span>
+        <span><i style="background:#94A3B8"></i>待命</span>
+      </div>
+    </footer>
+  </div>
+  <script src="./app.js"></script>
+</body>
+</html>
